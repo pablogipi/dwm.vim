@@ -2,7 +2,7 @@
 
 dwm.vim adds tiled window management capabilities to Vim. It is highly inspired by [dwm](http://dwm.suckless.org/) (Dynamic Window Manager) tiled layout management. 
 
-Download page on vim.org: http://www.vim.org/scripts/script.php?script_id=4186
+This is dwm.vim 0.2 a fork from the original plugin: http://www.vim.org/scripts/script.php?script_id=4186
 
 Windows are always organised as follows: 
 
@@ -23,6 +23,28 @@ Use the following commands to create, browse and close windows:
 - `C-J` Jumps to next window (clockwise) 
 - `C-K` Jumps to previous window (anti-clockwise) 
 - `C-Space` Focus the current window, that is, place it in the master pane [M] & stacks all other windows in the stacked pane [S]
+
+### v0.1.3 Fork
+This fork is all about making dwm.vim compatible with certain plugins.
+By _compatible_ I mean opening the tiled layout is respected when these pluging
+opens their respective windows. 
+Supported plugins:
+- Nerd Tree
+- Vista
+- Scratch
+
+Special vim buffers with better compatibility:
+- Quickfix
+- Terminal
+
+In all the cases covered we can add new windows to the layout, close them,
+rotate or swap focus and the layout works respecting the windwos created by
+those plugins. In oter words if we have NERDTrtee open on the left side and
+rotate windows the rotation is done as expected and the NERDT Tree windows is
+not taking into account ant it left position respected.
+Similar thing iof you have a Vista window at the right or a Quickfix window at
+the bottom.
+
 
 ### ScreenShot
 
@@ -52,6 +74,12 @@ You can use `curl -so` if you prefer it over `wget`.
 To use a mouse to select windows and resize panes:
 - `set mouse=a`: enable the use of the mouse in all modes
 - `set ttymouse=xterm2`: recognize mouse codes for the xterm2 terminal type
+
+###  Changes in version 0.2
+Version 0.2 is a fork from the original dwm.vim project.
+These are the main changes:
+- When a new window is created instead of creating a new buffer it makes
+  a split of the current one.
 
 ### Remarks
 

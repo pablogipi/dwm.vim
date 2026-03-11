@@ -19,12 +19,22 @@
 "      History: See supplied documentation.
 "==============================================================================
 
+"==============================================================================
+"   Contributor: Pablo Gimenez (pablogipi at gmail dot com)
+"  Last Changed: Monday, 09 March 2026
+"       Version: See g:dwm_version for version number.
+"       Changes: Added support to keep layout with plugins
+"                like NERD Tree, Vista Scratch and with Quickfix
+"                windows
+"==============================================================================
+
+
 " Exit quickly if already running
 if exists("g:dwm_version") || &diff || &cp
   finish
 endif
 
-let g:dwm_version = "0.1.2"
+let g:dwm_version = "0.1.3"
 
 " Check for Vim version 700 or greater {{{1
 if v:version < 700
@@ -65,32 +75,57 @@ function! DWM_Stack(clockwise)
   " +-----------------+
 endfunction
 
+" Pre layout windows. This allows to do some operations before any DWM layoput
+" command is run:
+" - Take care of NERDTree windws to keep layout with NERDTree at the left
+function! DWM_PreLayout()
+
+
+endfunction
+
+
 " Add a new buffer
 function! DWM_New()
-  " Move current master pane to the stack
-  call DWM_Stack(1)
-  " Create a vertical split
-  vert topleft new
-  call DWM_ResizeMasterPaneWidth()
+    " Check if the  current window is part of the 'layout'
+    if !DWM_CanChangeLayout()
+        return
+    endif
+    call DWM_PreLayoutChange()
+
+    " Move current master pane to the stack
+    call DWM_Stack(1)
+    " Create a vertical split
+    vert topleft split
+    call DWM_ResizeMasterPaneWidth()
+
+    call DWM_PostLayoutChange()
 endfunction
 
 " Move the current window to the master pane (the previous master window is
 " added to the top of the stack). If current window is master already - switch
 " to stack top
 function! DWM_Focus()
-  if winnr('$') == 1
-    return
-  endif
+    " Check if the  current window is part of the 'layout'
+    if !DWM_CanChangeLayout()
+        return
+    endif
+    call DWM_PreLayoutChange()
 
-  if winnr() == 1
-    wincmd w
-  endif
+    if winnr('$') == 1
+        return
+    endif
 
-  let l:curwin = winnr()
-  call DWM_Stack(1)
-  exec l:curwin . "wincmd w"
-  wincmd H
-  call DWM_ResizeMasterPaneWidth()
+    if winnr() == 1
+        wincmd w
+    endif
+
+    let l:curwin = winnr()
+    call DWM_Stack(1)
+    exec l:curwin . "wincmd w"
+    wincmd H
+    call DWM_ResizeMasterPaneWidth()
+
+    call DWM_PostLayoutChange()
 endfunction
 
 " Handler for BufWinEnter autocommand
@@ -109,6 +144,22 @@ function! DWM_AutoEnter()
   if &l:buftype == 'quickfix'
     return
   endif
+  " Skip nerdtree buffers
+  if &l:buftype == 'nerdtree'
+    return
+  endif
+  " Skip nerdtree buffers
+  if &l:filetype == 'vista'
+    return
+  endif
+  " Skip Scratch buffers
+  if &l:filetype == 'scratch'
+    return
+  endif
+  " Skip terminal buffers
+  if &l:buftype == 'terminal'
+    return
+  endif
 
   " Move new window to stack top
   wincmd K
@@ -120,12 +171,21 @@ endfunction
 
 " Close the current window
 function! DWM_Close()
-  if winnr() == 1
-    " Close master panel.
-    return 'close | wincmd H | call DWM_ResizeMasterPaneWidth()'
-  else
-    return 'close'
-  end
+    " Check if the  current window is part of the 'layout'
+    if !DWM_CanChangeLayout()
+        return
+    endif
+
+    if winnr() == 1
+        " Close master panel.
+        return 'close | wincmd H | call DWM_ResizeMasterPaneWidth()'
+    else
+        return 'close'
+    end
+
+    call DWM_PreLayoutChange()
+
+    call DWM_PostLayoutChange()
 endfunction
 
 function! DWM_ResizeMasterPaneWidth()
@@ -168,15 +228,139 @@ function! DWM_ShrinkMaster()
   endif
 endfunction
 
+" Function to do all required operations before layoput changes
+" - Find all well know buffer types (NerdTree, Vista, Qyuckfix, etc ....
+" - Register found windows in global vars
+" - For every known window Close it
+function! DWM_PreLayoutChange()
+    " Find well known windows
+    let g:dwm_has_nerdtree = TDVimFindWindowByType ( "nerdtree" )
+    let g:dwm_has_vista    = TDVimFindWindowByType ( "vista" )
+    let g:dwm_has_quickfix = TDVimFindWindowByType ( "quickfix" )
+    let g:dwm_has_scratch  = TDVimFindWindowByType ( "scratch" )
+    let g:dwm_has_terminal  = TDVimFindWindowByType ( "terminal" )
+
+    " close well known windows
+    if g:dwm_has_nerdtree > 0
+        echomsg "Close NERDTree: " . g:dwm_has_nerdtree
+        NERDTreeToggleVCS
+    endif
+    if g:dwm_has_vista > 0
+        echomsg "Close Vista: " . g:dwm_has_vista
+        silent! Vista!
+    endif
+    if g:dwm_has_quickfix > 0
+        echomsg "Close Quickfix: " . g:dwm_has_quickfix
+        cclose
+    endif
+    if g:dwm_has_scratch > 0
+        echomsg "Close Scratch: " . g:dwm_has_scratch
+        exe g:dwm_has_scratch . "wincmd c"
+    endif
+    if g:dwm_has_terminal > 0
+        echomsg "Hide Terminal: " . g:dwm_has_terminal
+        exe g:dwm_has_terminal . "hide"
+    endif
+
+endfunction
+
+" Function to do all required operations after layoput changes
+" - Find registered well known windows. Basically envars
+" - For registered windows restore them
+" - Reset every positive envar related to well known windows
+function! DWM_PostLayoutChange()
+    " Save current buffer focus
+    let nbuf     = winbufnr(winnr())
+    let buftype  = getbufvar(nbuf, '&buftype')
+    let bufname  = bufname(nbuf)
+    let filetype = getbufvar(nbuf, '&filetype')
+    let restore_focus = v:false
+    " Find well known windows that needs to be restored
+    echo "Need to restore NERDTree: " . g:dwm_has_nerdtree
+    if g:dwm_has_nerdtree > 0
+        NERDTreeToggleVCS
+        echomsg "NERDTRee restored"
+        let g:dwm_has_nerdtree = -1
+        let restore_focus = v:true
+    endif
+    echo "Need to restore Vista: " . g:dwm_has_vista
+    if g:dwm_has_vista > 0
+        silent! Vista!!
+        echomsg "Vista restored"
+        let g:dwm_has_vista = -1
+        let restore_focus = v:true
+    endif
+    echo "Need to restore Quickfix: " . g:dwm_has_quickfix
+    if g:dwm_has_quickfix > 0
+        copen
+        echomsg "Quickfix restored"
+        let g:dwm_has_quickfix = -1
+        let restore_focus = v:true
+    endif
+    echo "Need to restore Scratch: " . g:dwm_has_scratch
+    if g:dwm_has_scratch > 0
+        Scratch
+        echomsg "Scratch restored"
+        let g:dwm_has_quickfix = -1
+        let restore_focus = v:true
+    endif
+    echo "Need to restore Terminal: " . g:dwm_has_terminal
+    if g:dwm_has_terminal > 0
+        " Thanks Deepseek
+        execute "botright sb" filter(range(1, bufnr('$')), 'getbufvar(v:val, "&buftype") == "terminal"')[0]
+        echomsg "Tewrminal restored"
+        let g:dwm_has_terminal = -1
+        let restore_focus = v:true
+    endif
+    " Restore focus to our window
+    if restore_focus
+        echomsg "Looking for buffer: " . bufname
+        let win_nr = bufwinnr(bufname)
+        echomsg  "Found at: " . win_nr
+        if win_nr != -1
+            exe win_nr . "wincmd w"
+        endif
+    endif
+
+endfunction
+
+" Check if the  current window is part of the 'layout'
+" For instance if our focus is in a NERDTree window thne don't modify the
+" layout
+function! DWM_CanChangeLayout()
+    let nbuf = winbufnr(winnr())
+    let buftype = getbufvar(nbuf, '&buftype')
+    let filetype = getbufvar(nbuf, '&filetype')
+
+    if buftype  ==# "nofile" || filetype ==# 'nerdtree'
+        return v:false
+    endif
+
+    return v:true
+endfunction
+
+
+
+" Rotate windows, clockwise or anti clockwise. Main window move to first
+" position in stack and last window in stack becomes main window (clockwise)
 function! DWM_Rotate(clockwise)
-  call DWM_Stack(a:clockwise)
-  if a:clockwise
-    wincmd W
-  else
-    wincmd w
-  endif
-  wincmd H
-  call DWM_ResizeMasterPaneWidth()
+
+    " Check if the  current window is part of the 'layout'
+    if !DWM_CanChangeLayout()
+        return
+    endif
+    call DWM_PreLayoutChange()
+
+    call DWM_Stack(a:clockwise)
+    if a:clockwise
+        wincmd W
+    else
+        wincmd w
+    endif
+    wincmd H
+    call DWM_ResizeMasterPaneWidth()
+
+    call DWM_PostLayoutChange()
 endfunction
 
 nnoremap <silent> <Plug>DWMRotateCounterclockwise :call DWM_Rotate(0)<CR>
@@ -198,10 +382,12 @@ if g:dwm_map_keys
   nnoremap <C-K> <C-W>W
 
   if !hasmapto('<Plug>DWMRotateCounterclockwise')
-      nmap <C-,> <Plug>DWMRotateCounterclockwise
+      "nmap <C-,> <Plug>DWMRotateCounterclockwise
+      nmap <C-,>    :call DWM_Rotate(0)<CR>
   endif
   if !hasmapto('<Plug>DWMRotateClockwise')
-      nmap <C-.> <Plug>DWMRotateClockwise
+      "nmap <C-.> <Plug>DWMRotateClockwise
+      nmap <C-.>    :call DWM_Rotate(1)<CR>
   endif
 
   if !hasmapto('<Plug>DWMNew')
