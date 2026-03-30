@@ -242,23 +242,23 @@ function! DWM_PreLayoutChange()
 
     " close well known windows
     if g:dwm_has_nerdtree > 0
-        echomsg "Close NERDTree: " . g:dwm_has_nerdtree
+        "echomsg "Close NERDTree: " . g:dwm_has_nerdtree
         NERDTreeToggleVCS
     endif
     if g:dwm_has_vista > 0
-        echomsg "Close Vista: " . g:dwm_has_vista
+        "echomsg "Close Vista: " . g:dwm_has_vista
         silent! Vista!
     endif
     if g:dwm_has_quickfix > 0
-        echomsg "Close Quickfix: " . g:dwm_has_quickfix
+        "echomsg "Close Quickfix: " . g:dwm_has_quickfix
         cclose
     endif
     if g:dwm_has_scratch > 0
-        echomsg "Close Scratch: " . g:dwm_has_scratch
+        "echomsg "Close Scratch: " . g:dwm_has_scratch
         exe g:dwm_has_scratch . "wincmd c"
     endif
     if g:dwm_has_terminal > 0
-        echomsg "Hide Terminal: " . g:dwm_has_terminal
+        "echomsg "Hide Terminal: " . g:dwm_has_terminal
         exe g:dwm_has_terminal . "hide"
     endif
 
@@ -276,47 +276,47 @@ function! DWM_PostLayoutChange()
     let filetype = getbufvar(nbuf, '&filetype')
     let restore_focus = v:false
     " Find well known windows that needs to be restored
-    echo "Need to restore NERDTree: " . g:dwm_has_nerdtree
+    "echo "Need to restore NERDTree: " . g:dwm_has_nerdtree
     if g:dwm_has_nerdtree > 0
         NERDTreeToggleVCS
-        echomsg "NERDTRee restored"
+        "echomsg "NERDTRee restored"
         let g:dwm_has_nerdtree = -1
         let restore_focus = v:true
     endif
-    echo "Need to restore Vista: " . g:dwm_has_vista
+    "echo "Need to restore Vista: " . g:dwm_has_vista
     if g:dwm_has_vista > 0
         silent! Vista!!
-        echomsg "Vista restored"
+        "echomsg "Vista restored"
         let g:dwm_has_vista = -1
         let restore_focus = v:true
     endif
-    echo "Need to restore Quickfix: " . g:dwm_has_quickfix
+    "echo "Need to restore Quickfix: " . g:dwm_has_quickfix
     if g:dwm_has_quickfix > 0
         copen
-        echomsg "Quickfix restored"
+        "echomsg "Quickfix restored"
         let g:dwm_has_quickfix = -1
         let restore_focus = v:true
     endif
-    echo "Need to restore Scratch: " . g:dwm_has_scratch
+    "echo "Need to restore Scratch: " . g:dwm_has_scratch
     if g:dwm_has_scratch > 0
         Scratch
-        echomsg "Scratch restored"
+        "echomsg "Scratch restored"
         let g:dwm_has_quickfix = -1
         let restore_focus = v:true
     endif
-    echo "Need to restore Terminal: " . g:dwm_has_terminal
+    "echo "Need to restore Terminal: " . g:dwm_has_terminal
     if g:dwm_has_terminal > 0
         " Thanks Deepseek
         execute "botright sb" filter(range(1, bufnr('$')), 'getbufvar(v:val, "&buftype") == "terminal"')[0]
-        echomsg "Tewrminal restored"
+        "echomsg "Tewrminal restored"
         let g:dwm_has_terminal = -1
         let restore_focus = v:true
     endif
     " Restore focus to our window
     if restore_focus
-        echomsg "Looking for buffer: " . bufname
+        "echomsg "Looking for buffer: " . bufname
         let win_nr = bufwinnr(bufname)
-        echomsg  "Found at: " . win_nr
+        "echomsg  "Found at: " . win_nr
         if win_nr != -1
             exe win_nr . "wincmd w"
         endif
